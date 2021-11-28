@@ -22,7 +22,7 @@ BingoTop.html画面で以下の事前準備が必要です
 3. 参加者はBingoCard.html画面に自分の番号を入力し、「更新」ボタンでカードと現在の開き状況を確認できる
 
 ## 補足説明
-BingoCard.htmlは2021.11.28時点で未完成です。環境コード空欄しか対応していません
+2021.11.28 BingoTop.html画面はBingoTop.html#環境コード が指定可能。BingoCard.htmlはBingoCard.html#環境コード,カード番号 が指定可能なので、参加者には環境コード付きでURLを案内し、,カード番号を付けて開いてもらう
 
 以上
 

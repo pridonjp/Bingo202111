@@ -64,17 +64,23 @@
     <title >Bingo Card</title >
 </head >
 <body>
-    <div class="bg-primary text-white rounded-pill title">Bingoカード</div>
-    <div class="container">
+    <div class="bg-primary text-white rounded-pill title">Bingoカード</div><div style="float:left;margin-top: 10px;width:100px;padding-left:20px;font-weight:bold;color:red;" id="loading"></div>
+    <div class="container" style="clear:both;">
         <div class="row">
-            <div class="col-4">
+            <div class="col-4 col-lg-2">
                 カードナンバー
             </div>
-            <div class="col-8">
+            <div class="col-8 col-lg-2">
                 <input type="text" id="CardId" />
             </div>
-            <div class="col-8">
-                <button id="Load">更新</button>
+            <div class="col-4 col-lg-2">
+                環境コード
+            </div>
+            <div class="col-8 col-lg-2">
+                <span id="Env"></span>
+            </div>
+            <div class="col-12 col-lg-12">
+                <button id="Load" class="btn btn-primary btn-lg" style="width: 60%; margin-left: 20%; margin-top: 20px;">更新</button>
             </div>
         </div>
     </div>

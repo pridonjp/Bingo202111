@@ -9,8 +9,8 @@
         data: {},
         values: {},
         async: {
-            success: new Promise(function (resolve, reject) { resolve(); }),
-            fail: new Promise(function (resolve, reject) { reject(); })
+            success: function () {var d = $.Deferred();d.resolve();return d.promise();},
+            fail: function () {var d = $.Deferred();d.reject();return d.promise();}
         }
     }
 
@@ -20,15 +20,54 @@
 
     bingo.events.initialize = function () {
         bingo.elements.CardId = $("#CardId");
+        bingo.elements.Env = $("#Env");
         bingo.elements.Load = $("#Load");
         bingo.elements.result = $("#result");
         bingo.elements.bingoBox = $(".bingoBox");
 
-        bingo.elements.Load.on("click",bingo.events.Load)
+        //以下の何れかで指定
+        //url?Card=カード番号
+        //url?Env=環境コード
+        //url?Card=カード番号&Env=環境コード
+        //url#カード番号
+        //url#環境コード
+        //url#環境コード,カード番号
+        var cardid = bingo.events.getParam("[cC][aA][rR][dD]");
+        var env = bingo.events.getParam("[eE][nN][vV]");
+        var tag = location.hash;
+        if (tag && tag.length > 0) {
+            if (tag.substr(0, 1) == "#") tag = tag.substr(1);
+            var tags = tag.split(",");
+            if (tags.length == 1) {
+                if (tags[0].search(/^[0-9]+$/)>=0) {
+                    cardid = tags[0];
+                } else {
+                    env = tags[0];
+                }
+            } else {
+                env = tags[0];
+                cardid = tags[1];
+            }
+        }
+        if (cardid) bingo.elements.CardId.val(cardid);
+        if (env) bingo.elements.Env.text(env);
+
+        bingo.elements.Load.on("click", bingo.events.Load)
 
         $(window).resize(bingo.events.resize);
         bingo.events.resize();
 
+        var cardid = bingo.elements.CardId.val();
+        if (cardid && cardid.length > 0) bingo.events.Load();
+
+    }
+
+    bingo.events.getParam = function (name) {
+        var regex = new RegExp("[?&]" + name + "=([^&#]*)(&|#|$)");
+        var matches = regex.exec(location.search);
+        if (!matches) return null;
+        if (!matches[1] || matches[1].length == 0) return null;
+        return decodeURIComponent(matches[1].replace(/\+/g, " "));
     }
 
     bingo.events.resize = function () {
@@ -43,23 +82,26 @@
     }
 
     bingo.events.Load = function () {
-        bingo.values.id = bingo.elements.CardId.val();
+        var env = bingo.elements.Env.text();
+        var id = bingo.elements.CardId.val();
+        id = "Card." + (env && env.length > 0 ? env + "." : "") + id;
 
-        if (bingo.data.result && bingo.data.result.id == "Card." + bingo.values.id) {
-            var o = bingo.async.success;
+        $("#loading").text("Loading...");
+
+        if (bingo.data.result && bingo.data.result.id == id) {
+            var o = bingo.async.success();
         } else {
             bingo.elements.bingoBox.find(".bingoNum").removeClass("bingoNumBingo");
             bingo.elements.bingoBox.find(".bingoNum.bingo-13").addClass("bingoNumBingo");
 
             var query = {
-                url: bingo.url.BingoGetCard + "?id=Card." + bingo.values.id,
+                url: bingo.url.BingoGetCard + "?id=" + id,
                 type: "get",
             }
             var o=$.ajax(query)
                 .then(function (result) {
                     if (!result || result == "") return bingo.async.fail;
                     bingo.data.result = result;
-                    //bingo.elements.result.text(JSON.stringify(bingo.data.result));//デバッグ用
 
                     return bingo.events.bingoSetNumber();
                 })
@@ -68,14 +110,14 @@
                 })
         }
         o=o.then(function () {
+            var env = bingo.elements.Env.text();
             var query = {
-                url: bingo.url.BingoGetCard + "?id=Bingo.0",
+                url: bingo.url.BingoGetCard + "?id=Bingo." + (env && env.length > 0 ? env + "." : "")+"0",
                 type: "get",
             }
             return $.ajax(query)
                 .then(function (result) {
                     bingo.data.bingo = result;
-                    //bingo.elements.result.text(bingo.elements.result.text() + " " + JSON.stringify(bingo.data.bingo));//デバッグ用
                     var box = bingo.elements.bingoBox;
                     for (var i = 0; i < 25; i++) {
                         var cell = box.find(".bingo-" + (i + 1));
@@ -88,6 +130,9 @@
                 })
         })
 
+        o.always(function () {
+            $("#loading").text("");
+        });
         return o;
     }
 

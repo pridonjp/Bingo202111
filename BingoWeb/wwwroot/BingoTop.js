@@ -24,7 +24,7 @@
             }
         },
         values: {
-            BingoVersion: "2021.11.27.17",
+            BingoVersion: "2021.11.28.12",
             Env: null,
             done_rendercard: false,//ビンゴカードの描画が終わったらtrue
             BingoRunning:false,//当たり数値保存中の連続実行を防止
@@ -44,8 +44,8 @@
             maxNumEtc: 500, //無限ループ回避の適当な値
         },
         async: {
-            success: new Promise(function (resolve, reject) { resolve(); }),
-            fail: new Promise(function (resolve, reject) { reject(); })
+            success: function () { var d = $.Deferred(); d.resolve(); return d.promise(); },
+            fail: function () { var d = $.Deferred(); d.reject(); return d.promise(); }
         }
     }
 
@@ -80,7 +80,14 @@
 
         $("#BingoVersion").text(bingo.values.BingoVersion);
 
+        //url?env=環境コード　または　url#環境コード　で指定
         var env = bingo.events.getParam("[Ee][Nn][Vv]");
+        var tag = location.hash;
+        if (tag && tag.length > 0) {
+            if (tag.substr(0, 1) == "#") tag = tag.substr(1);
+            env = tag;
+        }
+
         if (env && env.length > 0) bingo.values.Env = env;
         $("#Env").val(bingo.values.Env);
         $("#Env").on("change", bingo.events.env);
