@@ -238,7 +238,7 @@
                     var idx = result[i].id.split(".");
                     idx = parseInt(idx[idx.length - 1]);
                     bingo.data.Names[idx] = result[i];
-                    var txt = bingo.data.Names[idx] ? bingo.data.Names[idx].name : "";
+                    var txt = bingo.data.Names[idx] && bingo.data.Names[idx].name ? bingo.data.Names[idx].name : "";
                     var e = $(".bingobox-" + idx).find(".bingoTITLE span.NameText");
                     if(e.text()!=txt)e.text(txt);
                 }
@@ -626,7 +626,7 @@
             var box = bingo.elements.bingocontainer.find(".bingobox-n").clone();
             box.css("display", "");
             box.find(".bingoTITLE span.CardNoText").text(idx + "番 ");
-            box.find(".bingoTITLE span.NameText").text(bingo.data.Names[idx] ? bingo.data.Names[idx].name : "");
+            box.find(".bingoTITLE span.NameText").text(bingo.data.Names[idx] && bingo.data.Names[idx].name? bingo.data.Names[idx].name : "");
             box.removeClass("bingobox-n").addClass("bingobox-" + idx);
             box.appendTo(bingo.elements.bingosubareaMain);
 

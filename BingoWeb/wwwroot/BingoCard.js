@@ -220,7 +220,7 @@
         }
         return $.ajax(query)
             .then(function (result) {
-                $("#name").val(result.name);
+                if(result && result.name)$("#name").val(result.name);
             })
             .fail(function (error) {
                 if (!bingo.values.loadtest) alert(JSON.stringify(error) + " query=" + JSON.stringify(query));
