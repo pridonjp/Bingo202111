@@ -23,6 +23,9 @@ BingoTop.html画面で以下の事前準備が必要です
 
 ## 補足説明
 2021.11.28 BingoTop.html画面はBingoTop.html#環境コード が指定可能。BingoCard.htmlはBingoCard.html#環境コード,カード番号 が指定可能なので、参加者には環境コード付きでURLを案内し、,カード番号を付けて開いてもらう
+2021.12.12 Azure Cosmos DB接続のCosmosClientをシングルインスタンス化しないと複数人の参加者で「One or more errors occurred. (Response status code does not indicate success: ServiceUnavailable (503); Substatus: 0; ActivityId: *****; Reason: (The request failed because the client was unable to establish connections to 4 endpoints across 1 regions.」というエラーでAzure Cosmos DBに接続出来なくなるので、プログラム対応
+           メモリキャッシュに存在するデータはCosmos DBに読みに行かないので、Webアプリはシングルインスタンスでしか実行できない(厳密にはIISのワーカープロセスが別れただけで不具合となるが、とりあえず忘年会が迫っているので短時間実用になればOKの稼働優先で)
+
 
 以上
 
