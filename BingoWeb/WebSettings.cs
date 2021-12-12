@@ -1,5 +1,8 @@
 ﻿namespace BindoWeb
 {
+    /// <summary>
+    /// 全体設定のシングルインスタンス appsettingsのインジェクションに使用
+    /// </summary>
     public class WebSettings
     {
         // The Azure Cosmos DB endpoint for running this sample.
@@ -13,8 +16,9 @@
         public string ContainerId { get; set; }
         public int? RandomSeed { get; set; }
         public int MaxBingoCard { get; set; }
-
-        //2021.11.21 追加予定昨日
-        //public readonly string IdPrifix = "Card.{0}";
+        public string Cachekey { get; set; } //メモリキャッシュのキャッシュ名
+        public string CacheSpanSeconds { get; set; } //メモリキャッシュの有効期限秒数
+        public bool DebugLog { get; set; }
+        public string ApplicationName { get; set; }
     }
 }

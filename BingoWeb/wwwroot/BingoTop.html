@@ -44,10 +44,32 @@
         .bingocontainer { /*ビンゴカード表示部分全体*/
         }
 
+/*        .bingosubareaBingo{
+            float:left;
+            width:525px;
+        }*/
+        /*
+        .bingoarea0 {
+            float: left;
+            width: 180px;
+        }
+
+       .bingoarea1 {
+            float: left;
+            width: 360px;
+        }
+
+        .bingoarea2 {
+            float: left;
+            width: 525px;
+        }
+        */
         .bingoONE { /*ビンゴカード1枚のブロック*/
+            position: relative;
             width: 155px;
-            height: 170px;
-            background-color: aqua;
+            height: 175px;
+            background-color: lightcyan;
+            border:2px solid lightblue;
             margin: 0px 10px 5px 10px;
             padding: 5px 5px 5px 8px;
             float: left;
@@ -94,11 +116,13 @@
 
         .bingoNum { /*ビンゴカードの丸数字*/
             float: left;
-            background-color: burlywood;
-            width: 90%;
-            height: 90%;
+            background-color: antiquewhite;
+            border: 2px solid peachpuff;
+            width: 93%;
+            height: 93%;
             padding: 0px;
-            font-size: small;
+            font-size: 15px;
+            font-weight:bold;
             /*文字中央ぞろえ（うまく効いた）*/
             text-align: center;
             display: -webkit-flex;
@@ -110,7 +134,7 @@
         }
 
             .bingoNum.bingoNumBingo { /*当たったビンゴカード丸数字*/
-                border: 4px solid red
+                border: 3px solid steelblue
             }
 
         .boxTitleBingo {
@@ -123,19 +147,64 @@
             color: red;
         }
 
+        .BingoChar {
+            visibility:hidden;
+        }
+        .boxBingoDone>.BingoChar,.boxBingo>.BingoChar {
+            visibility:visible;
+        }
+        .ReachChar {
+            visibility: hidden;
+        }
+
+        .boxReachDone > .ReachChar, .boxReach > .ReachChar {
+            visibility: visible;
+        }
+
+        .boxBingoDone > .ReachChar, .boxBingo > .ReachChar {
+            visibility: hidden;
+        }
+
         .boxBingoDone {
-            border: solid 1px red;
+            /*border: solid 3px red;*/
         }
 
         .boxReachDone {
+            /*border: solid 3px blue;*/
         }
 
         .boxBingo {
-            border: solid 5px red;
+            /*border: solid 3px red;*/
+            background-color:yellow;
         }
 
         .boxReach {
-            border: solid 3px blue;
+            /*border: solid 3px blue;*/
+            background-color: lightgreen;
+        }
+        .BingoChar {
+            position: absolute;
+            top: 15px;
+            left: 10px;
+            color: red;
+            font-weight: bold;
+            font-size:40px;
+            z-index: 990;
+            /*text-shadow: 1px 2px 3px #F0F0F0;*/
+            opacity:0.7;
+        }
+        .ReachChar {
+            position: absolute;
+            top: 15px;
+            left: 10px;
+            color: darkorange;
+            font-weight: bold;
+            font-size: 35px;
+            z-index: 990;
+            opacity: 0.6;
+        }
+        #history{
+            font-size:xx-large;
         }
     </style>
     <style>
@@ -206,15 +275,21 @@
                     <div class="col-4 col-lg-1 border control-input">
                         <a class="btn btn-primary btn-sm btn-block" id="bingo3">超巻き</a>
                     </div>
-                    <div class="col-9 col-lg-6 ">
+                    <div class="col-9 col-lg-5 ">
                         <input type="text" id="bingolist" style="width:95%;" />
                     </div>
-                    <div class="col-3 col-lg-1">
-                        <label for="detailCheck"><input type="checkbox" id="detailCheck" />Options</label>
+                    <div class="col-4 col-lg-1 ">
+                        <a class="btn btn-primary btn-sm btn-block" data-toggle="modal" data-target="#historyModal">
+                            履歴
+                        </a>
+
                     </div>
-                    <div class="col-4 col-lg-1">環境コード</div>
-                    <div class="col-4 col-lg-1"><input type="text" id="Env" title="任意の環境コードを入力" /></div>
-                </div>
+                        <div class="col-3 col-lg-1">
+                            <label for="detailCheck"><input type="checkbox" id="detailCheck" />Options</label>
+                        </div>
+                        <div class="col-4 col-lg-1">環境コード</div>
+                        <div class="col-4 col-lg-1"><input type="text" id="Env" title="任意の環境コードを入力" /></div>
+                    </div>
                 <div class="row" id="detailOptions" style="display:none;">
                     <div class="col-6 col-lg-2">
                         <a href="BingoCard.html" target="_blank">カード画面表示</a>
@@ -237,58 +312,86 @@
                     <div class="col-4 col-lg-2">
                         <a class="btn btn-primary btn-sm btn-block" id="createcontainer" style="">コンテナ作成</a>
                     </div>
+                    <div class="col-4 col-lg-1">
+                        <input type="checkbox" id="stoptimer" />
+                    </div>
                 </div>
-            </div>
+                </div>
         </div>
+        <div id="InitialError"></div>
         <div class="bingoroulette">
             <div class="bingoRouletteCell"><div class="rounded-circle bingoRouletteNum roulette-n"></div></div>
         </div>
         <div class="bingocontainer" style="clear:both;">
-            <div class="bingoONE bingobox-n">
-                <div class="bingoTITLE">1番</div>
-                <div class="bingoBox">
-                    <div class="LineInBox">
-                        <div class="bingoCell bingoTOP"><div class="rounded-circle bingoNum bingo-1"></div></div>
-                        <div class="bingoCell"><div class="rounded-circle bingoNum bingo-2"></div></div>
-                        <div class="bingoCell"><div class="rounded-circle bingoNum bingo-3"></div></div>
-                        <div class="bingoCell"><div class="rounded-circle bingoNum bingo-4"></div></div>
-                        <div class="bingoCell"><div class="rounded-circle bingoNum bingo-5"></div></div>
-                    </div>
-                    <div class="LineInBox">
-                        <div class="bingoCell bingoTOP"><div class="rounded-circle bingoNum bingo-6"></div></div>
-                        <div class="bingoCell"><div class="rounded-circle bingoNum bingo-7"></div></div>
-                        <div class="bingoCell"><div class="rounded-circle bingoNum bingo-8"></div></div>
-                        <div class="bingoCell"><div class="rounded-circle bingoNum bingo-9"></div></div>
-                        <div class="bingoCell"><div class="rounded-circle bingoNum bingo-10"></div></div>
-                    </div>
-                    <div class="LineInBox">
-                        <div class="bingoCell bingoTOP"><div class="rounded-circle bingoNum bingo-11"></div></div>
-                        <div class="bingoCell"><div class="rounded-circle bingoNum bingo-12"></div></div>
-                        <div class="bingoCell"><div class="rounded-circle bingoNum bingo-13 bingoNumBingo"></div></div>
-                        <div class="bingoCell"><div class="rounded-circle bingoNum bingo-14"></div></div>
-                        <div class="bingoCell"><div class="rounded-circle bingoNum bingo-15"></div></div>
-                    </div>
-                    <div class="LineInBox">
-                        <div class="bingoCell bingoTOP"><div class="rounded-circle bingoNum bingo-16"></div></div>
-                        <div class="bingoCell"><div class="rounded-circle bingoNum bingo-17"></div></div>
-                        <div class="bingoCell"><div class="rounded-circle bingoNum bingo-18"></div></div>
-                        <div class="bingoCell"><div class="rounded-circle bingoNum bingo-19"></div></div>
-                        <div class="bingoCell"><div class="rounded-circle bingoNum bingo-20"></div></div>
-                    </div>
-                    <div class="LineInBox">
-                        <div class="bingoCell bingoTOP"><div class="rounded-circle bingoNum bingo-21"></div></div>
-                        <div class="bingoCell"><div class="rounded-circle bingoNum bingo-22"></div></div>
-                        <div class="bingoCell"><div class="rounded-circle bingoNum bingo-23"></div></div>
-                        <div class="bingoCell"><div class="rounded-circle bingoNum bingo-24"></div></div>
-                        <div class="bingoCell"><div class="rounded-circle bingoNum bingo-25"></div></div>
+            <div class="bingosubareaBingo bingoarea0">
+
+            </div>
+            <div class="bingosubareaMain">
+                <div class="bingoONE bingobox-n">
+                    <div class="BingoChar">Bingo!</div>
+                    <div class="ReachChar">Reach</div>
+                    <div class="bingoTITLE" style="white-space: nowrap;"><span class="CardNoText"></span>&nbsp;<span class="NameText"></span></div>
+                    <div class="bingoBox">
+                        <div class="LineInBox">
+                            <div class="bingoCell bingoTOP"><div class="rounded-circle bingoNum bingo-1"></div></div>
+                            <div class="bingoCell"><div class="rounded-circle bingoNum bingo-2"></div></div>
+                            <div class="bingoCell"><div class="rounded-circle bingoNum bingo-3"></div></div>
+                            <div class="bingoCell"><div class="rounded-circle bingoNum bingo-4"></div></div>
+                            <div class="bingoCell"><div class="rounded-circle bingoNum bingo-5"></div></div>
+                        </div>
+                        <div class="LineInBox">
+                            <div class="bingoCell bingoTOP"><div class="rounded-circle bingoNum bingo-6"></div></div>
+                            <div class="bingoCell"><div class="rounded-circle bingoNum bingo-7"></div></div>
+                            <div class="bingoCell"><div class="rounded-circle bingoNum bingo-8"></div></div>
+                            <div class="bingoCell"><div class="rounded-circle bingoNum bingo-9"></div></div>
+                            <div class="bingoCell"><div class="rounded-circle bingoNum bingo-10"></div></div>
+                        </div>
+                        <div class="LineInBox">
+                            <div class="bingoCell bingoTOP"><div class="rounded-circle bingoNum bingo-11"></div></div>
+                            <div class="bingoCell"><div class="rounded-circle bingoNum bingo-12"></div></div>
+                            <div class="bingoCell"><div class="rounded-circle bingoNum bingo-13 bingoNumBingo"></div></div>
+                            <div class="bingoCell"><div class="rounded-circle bingoNum bingo-14"></div></div>
+                            <div class="bingoCell"><div class="rounded-circle bingoNum bingo-15"></div></div>
+                        </div>
+                        <div class="LineInBox">
+                            <div class="bingoCell bingoTOP"><div class="rounded-circle bingoNum bingo-16"></div></div>
+                            <div class="bingoCell"><div class="rounded-circle bingoNum bingo-17"></div></div>
+                            <div class="bingoCell"><div class="rounded-circle bingoNum bingo-18"></div></div>
+                            <div class="bingoCell"><div class="rounded-circle bingoNum bingo-19"></div></div>
+                            <div class="bingoCell"><div class="rounded-circle bingoNum bingo-20"></div></div>
+                        </div>
+                        <div class="LineInBox">
+                            <div class="bingoCell bingoTOP"><div class="rounded-circle bingoNum bingo-21"></div></div>
+                            <div class="bingoCell"><div class="rounded-circle bingoNum bingo-22"></div></div>
+                            <div class="bingoCell"><div class="rounded-circle bingoNum bingo-23"></div></div>
+                            <div class="bingoCell"><div class="rounded-circle bingoNum bingo-24"></div></div>
+                            <div class="bingoCell"><div class="rounded-circle bingoNum bingo-25"></div></div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+        <ul id="debuglog"></ul>
         <div id="BigNum"></div>
 
     </div>
-
+    <div class="modal fade" id="historyModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span>×</span></button>
+                    <h4 class="modal-title">履歴</h4>
+                </div>
+                <div class="modal-body">
+                    <ul id="history">
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">閉じる</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="lib/bootstrap/dist/js/bootstrap.js"></script>
 </body>

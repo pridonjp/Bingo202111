@@ -1,7 +1,9 @@
+using BingoWeb;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -27,8 +29,12 @@ namespace BindoWeb
         {
             services.AddControllers();
 
+            services.AddMemoryCache();//2021.12.4 APIコントローラでIMemoryCacheを使用する
+
             //2021.11.21 コントローラで使うappsettingsを用意しておく
             var webSettings = new WebSettings();
+            webSettings.Cachekey = Configuration["Cachekey"];
+            webSettings.CacheSpanSeconds = Configuration["CacheSpanSeconds"];
             webSettings.EndpointUri = Configuration["EndPointUri"];
             webSettings.PrimaryKey = Configuration["PrimaryKey"];
             webSettings.DatabaseId = Configuration["DatabaseId"];
@@ -42,8 +48,22 @@ namespace BindoWeb
             {
                 webSettings.RandomSeed = int.Parse(Configuration["RandomSeed"]);
             }
+            if(!String.IsNullOrWhiteSpace(Configuration["DebugLog"]) && bool.Parse(Configuration["DebugLog"]))
+            {
+                webSettings.DebugLog = true;
+            }
+            else
+            {
+                webSettings.DebugLog = false;
+            }
+            webSettings.ApplicationName = Configuration["ApplicationName"];
             services.AddSingleton(webSettings);
 
+            var cosmosClient= new CosmosClient(webSettings.EndpointUri, webSettings.PrimaryKey, new CosmosClientOptions() { ApplicationName = webSettings.ApplicationName });
+            services.AddSingleton(cosmosClient);
+
+            var cosmosCall = new CosmosCall(webSettings,cosmosClient);
+            services.AddSingleton(cosmosCall);
 
         }
 

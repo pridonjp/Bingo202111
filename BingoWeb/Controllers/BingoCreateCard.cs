@@ -1,5 +1,7 @@
-﻿using CosmoBingoSample;
+﻿using BingoWeb;
+using CosmoBingoSample;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
@@ -14,14 +16,18 @@ namespace BindoWeb.Controllers
     {
         private readonly ILogger<BingoCreateCardController> _logger;
         private readonly WebSettings webSettings;
+        private readonly IMemoryCache cache;
+        private readonly CosmosCall cosmosCall;
         private Random random;
 
-        public BingoCreateCardController(ILogger<BingoCreateCardController> logger,WebSettings webSettings)
+        public BingoCreateCardController(ILogger<BingoCreateCardController> logger,WebSettings webSettings, IMemoryCache cache,CosmosCall cosmosCall)
         {
             _logger = logger;
 
             //appsettingsを取得 Startup.csで準備しておく必要がある
             this.webSettings= webSettings;
+            this.cache = cache;
+            this.cosmosCall = cosmosCall;
 
             //乱数初期化（2021.11.21時点ではビンゴカード生成のみに使用）
             if (webSettings.RandomSeed == null)
@@ -39,44 +45,52 @@ namespace BindoWeb.Controllers
         /// </summary>
         /// <returns></returns>
         [HttpGet]
-        public Object Get(string env)
+        public void Get(string env,int n)
         {
-            var category = "Card";
-            if (!String.IsNullOrEmpty(env) && env != "null" && env != "undefined")
-            {
-                category=String.Format("{0}.{1}",category,env);
-            }
+            //env未指定はnullに正規化
+            if (String.IsNullOrWhiteSpace(env) || env == "null" || env == "undefined") env = null;
 
-            var bingo = new BingoUtil(webSettings);
+            var bingo = new BingoUtil(webSettings,cache,cosmosCall);
 
             //変更前のカードを取得
             List<BingoData> before=null;
-            before = bingo.QueryItems(category);
+            before = bingo.QueryItems<BingoData>(env,"Card");
 
-            //Cardを全件削除
-            foreach (var item in before)
+            //n=0の場合Cardを全件削除
+            if (n == 0)
             {
-                bingo.DeleteById(item.id, item.category);
+                foreach (var item in before)
+                {
+                    bingo.DeleteById<BingoData>(item.id, item.category);
+                }
             }
 
-            //Cardを生成
-            for (var i = 1; i <= webSettings.MaxBingoCard; i++)
+            //カード枚数をDBに記録
+            var data = new BingoData
             {
-                var id = String.Format(String.Format("{0}.{1}",category,i));
-                var bingodata = OneCard(id,category);
-                bingo.AddBingo(bingodata);
+                id= BingoUtil.IdFormat(env,"MaxCardNo",0),
+                category=BingoUtil.CategoryFormat(env, "MaxCardNo"),
+                numberData=new int[] {n}
+            };
+            bingo.AddOrReplaceBingo(data);
+
+            if (n > 0)
+            {
+                //Cardを生成
+                for (var i = 1; i <= n; i++)
+                {
+                    var id = BingoUtil.IdFormat(env,"Card", i);
+                    var bingodata = OneCard(id,env);
+                    bingo.AddOrReplaceBingo(bingodata);
+                }
             }
-
-            var after = bingo.QueryItems(category);
-
-            return new { before, after };
         }
 
-        BingoData OneCard(string id,string category)
+        BingoData OneCard(string id,string env)
         {
             var item=new BingoData();
             item.id = id;
-            item.category = category;
+            item.category = BingoUtil.CategoryFormat(env,"Card");
 
             var listUsed = new List<int>();
             var listNum = new List<int>();

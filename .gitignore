@@ -361,3 +361,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/BingoWeb/Properties/ServiceDependencies/BingoWeb1217 - Web Deploy
+/BingoWeb/Properties/serviceDependencies.BingoWeb1217 - Web Deploy.json
+/BingoWeb/ToDo.txt

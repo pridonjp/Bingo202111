@@ -1,6 +1,9 @@
-﻿using CosmoBingoSample;
-using Microsoft.Azure.Cosmos;
+﻿using BingoWeb;
+using CosmoBingoSample;
+//using Microsoft.Azure.Cosmos;
+using Microsoft.Extensions.Caching.Memory;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
 using System.Text;
@@ -8,95 +11,290 @@ using System.Threading.Tasks;
 
 namespace BindoWeb
 {
+    /// <summary>
+    ///メモリキャッシュに無かった事を返す用 
+    /// </summary>
+    class BingoCacheNotFoundException : Exception
+    {
+    }
+
     public class BingoUtil
     {
-        // The Azure Cosmos DB endpoint for running this sample.
-        private readonly string EndpointUri;
+        private readonly WebSettings webSettings;
+        private readonly IMemoryCache cache;
+        private readonly CosmosCall cosmosCall;
 
-        // The primary key for the Azure Cosmos account.
-        private readonly string PrimaryKey;
-
-        // The Cosmos client instance
-        private CosmosClient cosmosClient;
-
-        // The database we will create
-        private Database database;
-
-        // The container we will create.
-        private Container container;
-
-        // The name of the database and container we will create
-        private readonly string databaseId;
-        private readonly string containerId;
+        private readonly string cachekey;
+        private readonly int cacheSpanSeconds;
+        private readonly bool debugLog;
 
         /// <summary>
         /// コンストラクタ（2021.11.21時点唯一のコンストラクタ））
         /// </summary>
         /// <param name="webSettings">webSettings appsettings.jsonから必要な情報を読み込んだクラス</param>
-        public BingoUtil(WebSettings webSettings)
+        public BingoUtil(WebSettings webSettings, IMemoryCache cache,CosmosCall cosmosCall)
         {
-            EndpointUri = webSettings.EndpointUri;
-            PrimaryKey = webSettings.PrimaryKey;
-            databaseId=webSettings.DatabaseId;
-            containerId = webSettings.ContainerId;
-            cosmosClient = new CosmosClient(EndpointUri, PrimaryKey, new CosmosClientOptions() { ApplicationName = "Bingo" });
+            this.webSettings = webSettings;
+            this.cache = cache;
+            this.cosmosCall = cosmosCall;
 
-            database=this.cosmosClient.GetDatabase(databaseId);
-            container = this.database.GetContainer(containerId);            
+            this.cachekey = webSettings.Cachekey;
+            this.cacheSpanSeconds = int.Parse(webSettings.CacheSpanSeconds);
+
+            this.debugLog = webSettings.DebugLog;
+        }
+
+        /// <summary>
+        /// 実行状況デバッグログの専用キャッシュを取得
+        /// </summary>
+        /// <returns></returns>
+        private List<string> GetLogCache()
+        {
+            if (!debugLog) return null;
+            var key = cachekey + "_" + "log";
+
+            List<string> cachedata = null;
+            lock (cache)
+            {
+                if (!cache.TryGetValue(key, out cachedata))
+                {
+                    var option = new MemoryCacheEntryOptions()
+                                    .SetSlidingExpiration(TimeSpan.FromSeconds(cacheSpanSeconds));
+                    cache.Set(key, new List<string>(), option);
+                    cachedata = (List<string>)cache.Get(key);
+                }
+            }
+            return cachedata;
+        }
+        /// <summary>
+        /// 実行状況デバッグログの専用キャッシュを空にする
+        /// </summary>
+        public void DeleteLoagCache()
+        {
+            if (!debugLog) return;
+            GetLogCache().Clear();
+        }
+
+        const int MaxLogNum=1000;//実行状況デバッグログの保管上限
+
+        /// <summary>
+        /// 実行状況デバッグログの記録
+        /// </summary>
+        /// <param name="data"></param>
+        public void LogWrite(string data)
+        {
+            if (!debugLog) return;
+            var list = GetLogCache();
+            list.Add(data);
+            if (list.Count > MaxLogNum)
+            {
+                list.RemoveAt(0);
+            }
+        }
+
+        /// <summary>
+        /// 実行状況デバッグログの取得
+        /// </summary>
+        /// <returns></returns>
+        public List<string> LogRead()
+        {
+            return GetLogCache();
+        }
+
+
+        /// <summary>
+        /// メモリキャッシュに保管
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="id"></param>
+        /// <param name="data"></param>
+        public void WriteCache<T>(string id,T data) where T : IBingo
+        {
+            var key = cachekey+"_"+typeof(T).Name;
+
+            ConcurrentDictionary<string, T> cachedata=null;
+            lock (cache)
+            {
+                if (!cache.TryGetValue(key, out cachedata))
+                {
+                    var option = new MemoryCacheEntryOptions()
+                                    .SetSlidingExpiration(TimeSpan.FromSeconds(cacheSpanSeconds));
+                    cache.Set(key, new ConcurrentDictionary<string, T>(), option);
+                    cachedata=(ConcurrentDictionary<string,T>)cache.Get(key);
+                }
+            }
+            cachedata[id] = data;
+        }
+
+        /// <summary>
+        /// メモリキャッシュから読み込み
+        /// キャッシュに無かった場合はBingoCacheNotFoundException発生
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public T ReadCache<T>(string id) where T : class,IBingo
+        {
+            var key = cachekey + "_" + typeof(T).Name;
+
+            ConcurrentDictionary<string, T> cachedata = null;
+            lock (cache)
+            {
+                if (!cache.TryGetValue(key, out cachedata))
+                {
+                    var option = new MemoryCacheEntryOptions()
+                                    .SetSlidingExpiration(TimeSpan.FromSeconds(cacheSpanSeconds));
+                    cache.Set(key, new ConcurrentDictionary<string, T>(), option);
+                    cachedata = (ConcurrentDictionary<string, T>)cache.Get(key);
+                }
+            }
+            if (cachedata.ContainsKey(id))
+            {
+                return cachedata[id];
+            }
+            else
+            {
+                throw new BingoCacheNotFoundException();
+            }
+        }
+
+        /// <summary>
+        /// メモリキャッシュから削除
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="id"></param>
+        public void RemoveCache<T>(string id)
+        {
+            var key = cachekey + "_" + typeof(T).Name;
+
+            ConcurrentDictionary<string, T> cachedata = null;
+            lock (cache)
+            {
+                if (!cache.TryGetValue(key, out cachedata))
+                {
+                    var option = new MemoryCacheEntryOptions()
+                                    .SetSlidingExpiration(TimeSpan.FromSeconds(cacheSpanSeconds));
+                    cache.Set(key, new ConcurrentDictionary<string, T>(), option);
+                    cachedata = (ConcurrentDictionary<string, T>)cache.Get(key);
+                }
+            }
+            if (cachedata.ContainsKey(id))
+            {
+                T data;
+                cachedata.Remove(id,out data);
+            }
+        }
+
+        /// <summary>
+        /// キャッシュをクリヤ(BingoDataとBingoNameそれぞれ格納クラス名単位)
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        public void ClearCache<T>()
+        {
+            var key = cachekey + "_" + typeof(T).Name;
+
+            ConcurrentDictionary<string, T> cachedata = null;
+            lock (cache)
+            {
+                if (!cache.TryGetValue(key, out cachedata))
+                {
+                    var option = new MemoryCacheEntryOptions()
+                                    .SetSlidingExpiration(TimeSpan.FromSeconds(cacheSpanSeconds));
+                    cache.Set(key, new ConcurrentDictionary<string, T>(), option);
+                    cachedata = (ConcurrentDictionary<string, T>)cache.Get(key);
+                }
+            }
+            cache.Remove(key);
+        }
+
+        /// <summary>
+        /// idからcategoryを抽出（仕様上id文字列にcategoryも含めている）
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public static string id2category(string id)
+        {
+            var al= (id.Split(new char[] { '.' }));
+            if (al.Length > 2)
+            {
+                return String.Format("{0}.{1}", al[0], al[1]);
+            }
+            return al[0];
+        }
+
+        /// <summary>
+        /// 環境コード付きのcategory文字列を返す
+        /// </summary>
+        /// <param name="env"></param>
+        /// <param name="category"></param>
+        /// <returns></returns>
+        public static string CategoryFormat(string env,string category)
+        {
+            //env未指定はnullに正規化
+            if (String.IsNullOrWhiteSpace(env) || env == "null" || env == "undefined") env = null;
+            if (env == null)
+            {
+                return category;
+            }
+            else
+            {
+                return String.Format("{0}.{1}", category, env);
+            }
+        }
+        /// <summary>
+        /// 環境コード、カテゴリー付きのidを返す
+        /// </summary>
+        /// <param name="env"></param>
+        /// <param name="category"></param>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public static string IdFormat(string env,string category, int id)
+        {
+            //env未指定はnullに正規化
+            if (String.IsNullOrWhiteSpace(env) || env == "null" || env == "undefined") env = null;
+            if (env == null)
+            {
+                return String.Format("{0}.{1}", category, id);
+            }
+            else
+            {
+                return String.Format("{0}.{1}.{2}", category, env, id);
+            }
+
+        }
+
+        static long logCount = 0; //実行状況デバッグログの行番号
+
+        /// <summary>
+        /// 実行状況デバッグログ 行番号、現在秒、時刻付きで記録
+        /// </summary>
+        /// <param name="name">実行中のメソッド名.ConsosDB呼び出しメソッド名</param>
+        /// <param name="data">ログ識別（デバッグ）用にパラメータを記録</param>
+        private void LogWriteWithTime(string name,string data)
+        {
+            var t=DateTime.Now;
+            var s = String.Format("{0},{1},{2},{3},{4}", logCount++, t.ToString("ss"),t.ToString("yyyy-MM-dd HH:mm:ss.fff"),name,data);
+            LogWrite(s);
         }
 
         /// <summary>
         /// categoryを指定して一覧を取得
         /// </summary>
-        public List<BingoData> QueryItems(string category)
+        public List<T> QueryItems<T>(string env, string category) where T : IBingo
         {
-            var sqlQueryText = String.Format("SELECT * FROM c WHERE c.category = '{0}'",category);
-            QueryDefinition queryDefinition = new QueryDefinition(sqlQueryText);
-            FeedIterator<BingoData> queryResultSetIterator = this.container.GetItemQueryIterator<BingoData>(queryDefinition);
-
-            List<BingoData> bingos = new List<BingoData>();
-            while (queryResultSetIterator.HasMoreResults)
+            try
             {
-                Task<FeedResponse<BingoData>> currentResultSet = queryResultSetIterator.ReadNextAsync();
-                currentResultSet.Wait();
-                foreach (BingoData family in currentResultSet.Result)
+                LogWriteWithTime("QueryItems.GetItemQueryIterator", env + " " + category);
+                var items =cosmosCall.QueryItems<T>(env, category);
+                foreach(var item in items)
                 {
-                    bingos.Add(family);
+                    WriteCache(item.id, item);
                 }
-            }
+                return items;
 
-            return bingos;
-        }
-
-        /// <summary>
-        /// idを指定して取得
-        /// </summary>
-        /// <param name="id"></param>
-        /// <returns></returns>
-        public BingoData QueryItemById(string id)
-        {
-            var sqlQueryText = String.Format("SELECT * FROM c WHERE c.id = '{0}'", id);
-            QueryDefinition queryDefinition = new QueryDefinition(sqlQueryText);
-            FeedIterator<BingoData> queryResultSetIterator = this.container.GetItemQueryIterator<BingoData>(queryDefinition);
-
-            List<BingoData> bingos = new List<BingoData>();
-            while (queryResultSetIterator.HasMoreResults)
-            {
-                Task<FeedResponse<BingoData>> currentResultSet = queryResultSetIterator.ReadNextAsync();
-                currentResultSet.Wait();
-                foreach (BingoData row in currentResultSet.Result)
-                {
-                    bingos.Add(row);
-                }
-            }
-
-            if (bingos.Count == 0)
-            {
-                return null;
-            }
-            else
-            {
-                return bingos[0];
+            }catch (Exception ex){
+                LogWriteWithTime("[ERROR]", ex.Message + " " + ex.StackTrace);
+                throw;
             }
         }
 
@@ -104,29 +302,58 @@ namespace BindoWeb
         /// idを指定して削除
         /// </summary>
         /// <param name="id"></param>
-        public void DeleteById(string id,string category)
+        public void DeleteById<T>(string id,string category) where T:IBingo
         {
             try
             {
-                var task = this.container.DeleteItemAsync<BingoData>(id, new PartitionKey(category));
-                task.Wait();
+
+                RemoveCache<T>(id);
+                LogWriteWithTime("DeleteById.DeleteItemAsync",id);
+                cosmosCall.DeleteById<T>(id, category);
+            }catch (Exception ex){
+                LogWriteWithTime("[ERROR]", ex.Message + " " + ex.StackTrace);
+                throw;
             }
-            catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound) { }
-        }
+       }
  
         /// <summary>
-        /// Cardを追加
+        /// 追加または変更
         /// </summary>
-        /// <param name="bingo"></param>
-        public void AddBingo(BingoData bingo)
+        /// <typeparam name="T"></typeparam>
+        /// <param name="data"></param>
+        public void AddOrReplaceBingo<T>(T data) where T:IBingo
         {
-                var item = QueryItemById(bingo.id);
-                if (item!=null)
-                {
-                    DeleteById(bingo.id,bingo.category);
+            try
+            {
+
+                WriteCache(data.id, data);
+                LogWriteWithTime("AddOrReplaceBingo.ReadItemAsync", data.id);
+                cosmosCall.AddOrReplaceBingo(data);
+            }catch (Exception ex){
+                LogWriteWithTime("[ERROR]", ex.Message + " " + ex.StackTrace);
+                throw;
+            }
+        }
+
+        public T GetItemById<T>(string id) where T:class,IBingo
+        {
+            try
+            {
+                var category = id2category(id);
+
+                T data = null;
+                try {
+                    data= ReadCache<T>(id);
+                } catch (BingoCacheNotFoundException) { 
+                    LogWriteWithTime("GetItemById.ReadItemAsync",id);
+                    data=cosmosCall.GetItemById<T>(id);
+                    WriteCache(id, data);
                 }
-                Task<ItemResponse<BingoData>> createResponse = this.container.CreateItemAsync<BingoData>(bingo, new PartitionKey(bingo.category));
-                createResponse.Wait();
+                return data;
+            }catch (Exception ex){
+                LogWriteWithTime("[ERROR]", ex.Message + " " + ex.StackTrace);
+                throw;
+            }
         }
 
         /// <summary>
@@ -134,8 +361,18 @@ namespace BindoWeb
         /// </summary>
         public void DeleteContainer()
         {
-            var task = this.container.DeleteContainerAsync();
-            task.Wait();
+            try
+            {
+                ClearCache<BingoData>();
+                ClearCache<BingoName>();
+                LogWriteWithTime("DeleteContainer.DeleteContainerAsync","");
+                cosmosCall.DeleteContainer();
+            }
+            catch (Exception ex)
+            {
+                LogWriteWithTime("[ERROR]", ex.Message + " " + ex.StackTrace);
+                throw;
+            }
         }
 
         /// <summary>
@@ -143,8 +380,16 @@ namespace BindoWeb
         /// </summary>
         public void CreateContainer()
         {
-            var task = this.database.CreateContainerAsync(containerId, "/category", 400);
-            task.Wait();
+            try
+            {
+                LogWriteWithTime("GetItemById.CreateContainerAsync","");
+                cosmosCall.CreateContainer();
+            }
+            catch (Exception ex)
+            {
+                LogWriteWithTime("[ERROR]", ex.Message + " " + ex.StackTrace);
+                throw;
+            }
         }
 
     }

@@ -5,6 +5,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Threading.Tasks;
@@ -13,14 +14,14 @@ namespace BindoWeb.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    public class BingoDeleteContainerController : ControllerBase
+    public class BingoDeleteLogController : ControllerBase
     {
-        private readonly ILogger<BingoDeleteContainerController> _logger;
+        private readonly ILogger<BingoDeleteLogController> _logger;
         private readonly WebSettings webSettings;
         private readonly IMemoryCache cache;
         private readonly CosmosCall cosmosCall;
 
-        public BingoDeleteContainerController(ILogger<BingoDeleteContainerController> logger,WebSettings webSettings, IMemoryCache cache,CosmosCall cosmosCall)
+        public BingoDeleteLogController(ILogger<BingoDeleteLogController> logger,WebSettings webSettings, IMemoryCache cache,CosmosCall cosmosCall)
         {
             _logger = logger;
 
@@ -34,7 +35,7 @@ namespace BindoWeb.Controllers
         public void Get()
         {
             var bingo = new BingoUtil(webSettings,cache,cosmosCall);
-            bingo.DeleteContainer();
+            bingo.DeleteLoagCache();
         }
 
     }

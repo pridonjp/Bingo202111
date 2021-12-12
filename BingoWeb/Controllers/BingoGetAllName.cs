@@ -13,14 +13,14 @@ namespace BindoWeb.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    public class BingoDeleteContainerController : ControllerBase
+    public class BingoGetAllNameController : ControllerBase
     {
-        private readonly ILogger<BingoDeleteContainerController> _logger;
+        private readonly ILogger<BingoGetAllNameController> _logger;
         private readonly WebSettings webSettings;
         private readonly IMemoryCache cache;
         private readonly CosmosCall cosmosCall;
 
-        public BingoDeleteContainerController(ILogger<BingoDeleteContainerController> logger,WebSettings webSettings, IMemoryCache cache,CosmosCall cosmosCall)
+        public BingoGetAllNameController(ILogger<BingoGetAllNameController> logger,WebSettings webSettings, IMemoryCache cache,CosmosCall cosmosCall)
         {
             _logger = logger;
 
@@ -31,10 +31,13 @@ namespace BindoWeb.Controllers
         }
 
         [HttpGet]
-        public void Get()
+        public List<BingoName> Get(string env)
         {
+            //var category = BingoUtil.CategoryFormat(env,"Name");
+            var category = "Name";
             var bingo = new BingoUtil(webSettings,cache,cosmosCall);
-            bingo.DeleteContainer();
+            //Nameを全件取得
+            return bingo.QueryItems<BingoName>(env,category);
         }
 
     }

@@ -59,25 +59,54 @@
                 border: 4px solid red
             }
 
+            .hideloading{
+                visibility:hidden;
+            }
     </style>
 
     <title >Bingo Card</title >
 </head >
 <body>
-    <div class="bg-primary text-white rounded-pill title">Bingoカード</div><div style="float:left;margin-top: 10px;width:100px;padding-left:20px;font-weight:bold;color:red;" id="loading"></div>
+    <div class="bg-primary text-white rounded-pill title">Bingoカード</div><div style="float:left;margin-top: 10px;width:100px;padding-left:20px;font-weight:bold;color:red;" id="loading" class="hideloading">Loading...</div>
     <div class="container" style="clear:both;">
         <div class="row">
-            <div class="col-4 col-lg-2">
-                カードナンバー
-            </div>
-            <div class="col-8 col-lg-2">
-                <input type="text" id="CardId" />
-            </div>
             <div class="col-4 col-lg-2">
                 環境コード
             </div>
             <div class="col-8 col-lg-2">
                 <span id="Env"></span>
+            </div>
+            <div class="col-3 col-lg-2">
+                カードナンバー
+            </div>
+            <div class="col-8 col-lg-2">
+                <input type="text" id="CardId" />
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-3 col-lg-2">
+                名前変更
+            </div>
+            <div class="col-6 col-lg-2">
+                <input type="text" id="name" />
+            </div>
+            <div class="col-3 col-lg-2">
+                <a id="changename" class="btn btn-primary btn-sm">変更</a>
+            </div>
+            <div class="col-4 col-lg-2">
+                自動更新
+            </div>
+            <div class="col-6 col-lg-2">
+                <select id="autoreload">
+                    <option value="0">なし</option>
+                    <option value="2000">2秒</option>
+                    <option value="5000">5秒</option>
+                    <option value="10000">10秒</option>
+                    <option value="30000">30秒</option>
+                </select>
+            </div>
+            <div class="col-2 col-lg-2">
+                <span id="last"></span>
             </div>
             <div class="col-12 col-lg-12">
                 <button id="Load" class="btn btn-primary btn-lg" style="width: 60%; margin-left: 20%; margin-top: 20px;">更新</button>

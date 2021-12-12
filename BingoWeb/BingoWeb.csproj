@@ -11,6 +11,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Remove="ToDo.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Folder Include="Pages\" />
   </ItemGroup>
 
