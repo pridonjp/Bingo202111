@@ -17,7 +17,7 @@
             width: 50%;
             padding: 10px;
             text-align: center;
-            margin: 20px 0px 20px 25%;
+            margin: 10px 0px 10px 25%;
         }
     </style>
     <style>
@@ -67,7 +67,7 @@
     <title >Bingo Card</title >
 </head >
 <body>
-    <div class="bg-primary text-white rounded-pill title">Bingoカード</div><div style="float:left;margin-top: 10px;width:100px;padding-left:20px;font-weight:bold;color:red;" id="loading" class="hideloading">Loading...</div>
+    <div class="bg-primary text-white rounded-pill title">Bingoカード</div><div style="position:absolute;width:100px;left:40%;font-weight:bold;color:red;" id="loading" class="hideloading">Loading...</div>
     <div class="container" style="clear:both;">
         <div class="row">
             <div class="col-4 col-lg-2">
@@ -76,10 +76,10 @@
             <div class="col-8 col-lg-2">
                 <span id="Env"></span>
             </div>
-            <div class="col-3 col-lg-2">
+            <div class="col-5 col-lg-2">
                 カードナンバー
             </div>
-            <div class="col-8 col-lg-2">
+            <div class="col-6 col-lg-2">
                 <input type="text" id="CardId" />
             </div>
         </div>
@@ -93,7 +93,7 @@
             <div class="col-3 col-lg-2">
                 <a id="changename" class="btn btn-primary btn-sm">変更</a>
             </div>
-            <div class="col-4 col-lg-2">
+            <div class="col-3 col-lg-2">
                 自動更新
             </div>
             <div class="col-6 col-lg-2">
@@ -109,7 +109,7 @@
                 <span id="last"></span>
             </div>
             <div class="col-12 col-lg-12">
-                <button id="Load" class="btn btn-primary btn-lg" style="width: 60%; margin-left: 20%; margin-top: 20px;">更新</button>
+                <button id="Load" class="btn btn-primary btn-lg" style="width: 60%; margin-left: 20%; margin-top: 10px;">更新</button>
             </div>
         </div>
     </div>

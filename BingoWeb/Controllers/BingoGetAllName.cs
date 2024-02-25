@@ -33,11 +33,17 @@ namespace BindoWeb.Controllers
         [HttpGet]
         public List<BingoName> Get(string env)
         {
-            //var category = BingoUtil.CategoryFormat(env,"Name");
             var category = "Name";
             var bingo = new BingoUtil(webSettings,cache,cosmosCall);
-            //Nameを全件取得
-            return bingo.QueryItems<BingoName>(env,category);
+            var maxcard = bingo.GetItemById<BingoData>(BingoUtil.IdFormat(env, "MaxCardNo", 0));
+            var maxcardNum = maxcard.numberData[0];
+            var list = new List<BingoName>();
+            for (var i = 0; i < maxcardNum; i++)
+            {
+                var name = bingo.GetItemById<BingoName>(BingoUtil.IdFormat(env, category, i + 1));
+                list.Add(name);
+            }
+            return list;
         }
 
     }

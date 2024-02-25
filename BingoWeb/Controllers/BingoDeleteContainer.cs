@@ -33,6 +33,7 @@ namespace BindoWeb.Controllers
         [HttpGet]
         public void Get()
         {
+            if(!webSettings.ContainerDeletable)throw new OperationCanceledException("ContainerDeletable設定がfalseのためコンテナは削除できません");
             var bingo = new BingoUtil(webSettings,cache,cosmosCall);
             bingo.DeleteContainer();
         }

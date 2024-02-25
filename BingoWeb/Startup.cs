@@ -57,6 +57,7 @@ namespace BindoWeb
                 webSettings.DebugLog = false;
             }
             webSettings.ApplicationName = Configuration["ApplicationName"];
+            webSettings.ContainerDeletable = bool.Parse(Configuration["ContainerDeletable"]);
             services.AddSingleton(webSettings);
 
             var cosmosClient= new CosmosClient(webSettings.EndpointUri, webSettings.PrimaryKey, new CosmosClientOptions() { ApplicationName = webSettings.ApplicationName });

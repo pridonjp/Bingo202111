@@ -10,8 +10,21 @@
             BingoCreateContainer: "BingoCreateContainer",
             BingoSave: "BingoSave",
         },
-        elements: {},
-        events: {},
+        elements: {
+        },
+        events: {
+            error: function (error) {
+                if ($("#ignoreerror").prop("checked")) return;
+                var type = Object.prototype.toString.call(error);
+                if (type == "[object Object]") {
+                    var s = JSON.stringify(error);
+                } else {
+                    var s = error;
+                }
+                $("#ErrorInModal").text(s);
+                $("#errorModal").modal('show');
+            }
+        },
         data: {
             bingos: function (idx) {return bingo.data.bingolist.indexOf(idx)>=0 },//既出の当たった数値はtrue
             bingolist: [],//当たった番号のみ配列
@@ -33,7 +46,7 @@
             Names:[], //参加者名前データ
         },
         values: {
-            BingoVersion: "2021.12.12.22",
+            BingoVersion: "2021.12.16.23",
             Env: null,
             done_rendercard: false,//ビンゴカードの描画が終わったらtrue
             BingoRunning: false,//当たり数値保存中の連続実行を防止
@@ -51,6 +64,8 @@
 
             maxCardNumber: 50, //カードの数
             maxNumEtc: 500, //無限ループ回避の適当な値
+            namereflashtime: 5,//参加者名を更新する間隔　秒
+            getlankrunning: false,
         },
         async: {
             success: function () { var d = $.Deferred(); d.resolve(); return d.promise(); },
@@ -90,7 +105,7 @@
                     })
                     .fail(function (error) {
                         $("#loading").text("");
-                        alert("90 "+JSON.stringify(error));
+                        bingo.events.error(error);
                     })
             })
     }
@@ -99,7 +114,6 @@
         bingo.elements.bingocontainer = $(".bingocontainer");
         bingo.elements.bingosubareaMain = bingo.elements.bingocontainer.find(".bingosubareaMain");
         bingo.elements.bingosubareaBingo = bingo.elements.bingocontainer.find(".bingosubareaBingo");
-        bingo.elements.bingoroulette = $(".bingoroulette");
         bingo.elements.bingoroulette = $(".bingoroulette");
 
         $("#BingoVersion").text(bingo.values.BingoVersion);
@@ -124,6 +138,7 @@
             }
         });
         $("#createbingocard").on("click", bingo.events.createbingocard);
+        $("#getlank").on("click", bingo.events.getlank);
 
         bingo.values.current = 1;//最後に出た番号だが、null除けで何か代入しておく
 
@@ -151,9 +166,11 @@
                     .then(function (result) {
                         bingo.data.Names = [];
                         for (var i = 0; i < result.length; i++) {
-                            var idx = result[i].id.split(".");
-                            idx = parseInt(idx[idx.length - 1]);
-                            bingo.data.Names[idx] = result[i];
+                            if (result[i] && result[i].id) {
+                                var idx = result[i].id.split(".");
+                                idx = parseInt(idx[idx.length - 1]);
+                                bingo.data.Names[idx] = result[i];
+                            }
                         }
                     })
 
@@ -169,6 +186,7 @@
                 } else {
                     bingo.events.bingoFirst(e, bingo.values.rouletteCountExt);
                 }
+                bingo.events.checkAndRestartTimer();
             });
             $("#bingo2").on("click", function (e) { //抽選巻き
                 if (bingo.values.count > 0) {
@@ -177,6 +195,7 @@
                 } else {
                     bingo.events.bingoFirst(e, 0);
                 }
+                bingo.events.checkAndRestartTimer();
             });
             $("#bingo3").on("click", function (e) { //抽選超巻き
                 if (bingo.values.count > 0) {
@@ -185,6 +204,7 @@
                 } else {
                     bingo.events.bingoFirst(e, -1);
                 }
+                bingo.events.checkAndRestartTimer();
             });
 
             bingo.events.createRoulette();
@@ -201,8 +221,11 @@
                 $("#deletecontainer").on("click", function () {
                     $("#loading").text("Running...");
                     $.ajax({ url: bingo.url.BingoDeleteContainer, type: "get", })
+                        .then(function () {
+                            bingo.events.deleteallcard();
+                        })
                         .fail(function (error) {
-                            alert("165 "+SON.stringify(error));
+                            bingo.events.error(error);
                         })
                         .always(function () {
                             $("#loading").text("");
@@ -210,9 +233,13 @@
                 });
                 $("#createcontainer").on("click", function () {
                     $("#loading").text("Running...");
+                    bingo.events.deleteallcard();
                     $.ajax({ url: bingo.url.BingoCreateContainer, type: "get", })
+                        .then(function () {
+                            bingo.events.createbingocard();
+                        })
                         .fail(function (error) {
-                            alert("175 "+JSON.stringify(error));
+                            bingo.events.error(error);
                         })
                         .always(function () {
                             $("#loading").text("");
@@ -226,7 +253,77 @@
 
     }
 
+    bingo.events.getlank = function () {
+        if (! bingo.values.getlankrunning) {
+            $("#getlank").text("ストップ");
+            bingo.values.getlankrunning = true;
+            bingo.values.getlankstop = false;
+
+            $(".BingoLank").hide();
+            var boxs = $(".boxBingo");
+            boxs.find(".BingoLank").text("")
+            boxs.find(".BingoLank").show();
+            bingo.values.getlankspeed = 150;
+            bingo.values.getlanks = [];
+            bingo.values.getlanktargets = [];
+            bingo.values.getlankcounts = [];
+            for (var i = 0; i < boxs.length; i++) {
+                bingo.values.getlanks.push(i);
+                bingo.values.getlanktargets.push(0);
+                bingo.values.getlankcounts.push(Math.floor(Math.random() * 5 + boxs.length));
+            }
+            for (var i = 0; i < boxs.length; i++) {
+                for (var k = 0; k < bingo.values.maxNumEtc; k++) {
+                    var j = Math.floor(Math.random() * boxs.length) + 1;
+                    if (bingo.values.getlanktargets.indexOf(j) < 0) {
+                        bingo.values.getlanktargets[i] = j;
+                        break;
+                    }
+                }
+            }
+            bingo.events.getlanktimer();
+        } else {
+            bingo.values.getlankstop = true;
+        }
+    }
+
+    bingo.events.getlanktimer = function () {
+        var boxs = $(".boxBingo");
+        var f = false;
+        for (var i = 0; i < boxs.length; i++) {
+            var n = bingo.values.getlanks[i];
+            if (bingo.values.getlankcounts[i] > 0 || n != bingo.values.getlanktargets[i]) {
+                if (bingo.values.getlankstop) {
+                    bingo.values.getlankcounts[i]--;
+                    if (bingo.values.getlankcounts[i] < 0) bingo.values.getlankcounts[i] = 0;
+                }
+                var n = bingo.values.getlanks[i];
+                n++;
+                if (n > (boxs.length > 9 ? boxs.length : 9)) n = 0;
+                $(boxs[i]).find(".BingoLank").text(n);
+                bingo.values.getlanks[i] = n;
+                f = true;
+            }
+        }
+        if (f) {
+            setTimeout(bingo.events.getlanktimer, bingo.values.getlankspeed);
+        } else {
+            $("#getlank").text("順番");
+            bingo.values.getlankrunning = false;
+        }
+    }
+
+    //参加者名更新が10秒以上止まっていたら再度タイマーセット
+    bingo.events.checkAndRestartTimer = function () {
+        if ($("#stoptimer").prop("checked")) return;
+        if (Date.now() - bingo.values.laststoptimer > 10000) {
+            bingo.events.timer();
+        }
+    }
+
+    //参加者名更新タイマー
     bingo.events.timer = function () {
+        bingo.values.laststoptimer = Date.now();
         if ($("#stoptimer").prop("checked")) return;
         var query = {
             url: bingo.url.BingoGetNameFromTo + "?env=" + bingo.values.Env + "&category=Name&from=1&to="+bingo.values.maxCardNumber,
@@ -235,18 +332,20 @@
         $.ajax(query)
             .then(function (result) {
                 for (var i = 0; i < result.length; i++) {
-                    var idx = result[i].id.split(".");
-                    idx = parseInt(idx[idx.length - 1]);
-                    bingo.data.Names[idx] = result[i];
-                    var txt = bingo.data.Names[idx] && bingo.data.Names[idx].name ? bingo.data.Names[idx].name : "";
-                    var e = $(".bingobox-" + idx).find(".bingoTITLE span.NameText");
-                    if(e.text()!=txt)e.text(txt);
+                    if (result[i] && result[i].id) {
+                        var idx = result[i].id.split(".");
+                        idx = parseInt(idx[idx.length - 1]);
+                        bingo.data.Names[idx] = result[i];
+                        var txt = bingo.data.Names[idx] && bingo.data.Names[idx].name ? bingo.data.Names[idx].name : "";
+                        var e = $(".bingobox-" + idx).find(".bingoTITLE span.NameText");
+                        if (e.text() != txt) e.text(txt);
+                    }
                 }
-                setTimeout(bingo.events.timer, 5000);
+                setTimeout(bingo.events.timer, bingo.values.namereflashtime*1000);
             })
             .fail(function (error) {
+                bingo.events.error(error);
             })
-
     }
 
     bingo.events.getParam = function (name) {
@@ -276,7 +375,7 @@
                 return;
             })
             .fail(function (error) {
-                alert("229 "+JSON.stringify(error));
+                bingo.events.error(error);
             })
     }
 
@@ -346,11 +445,18 @@
                     h.empty();
                     for (var i = 0; i < bingo.data.bingohistory.length; i++) {
                         h.append("<li>" + (i + 1) + "回目&nbsp;" + bingo.data.bingohistory[i].join("番&nbsp;") + "番</li>")
+                        if (i == bingo.data.bingohistory.length - 1) {
+                            for (var j = 0; j < bingo.data.bingohistory[i].length; j++) {
+                                var idx = bingo.data.bingohistory[i][j];
+                                var box = bingo.elements.bingocontainer.find(".bingobox-" + idx);
+                                box.addClass("boxBingo");
+                            }
+                        }
                     }
                 })
             })
             .fail(function (error) {
-                alert("303 "+JSON.stringify(error)+" "+query.url);
+                bingo.events.error(error);
             })
             .always(function () {
                 $("#loading").text("");
@@ -366,6 +472,7 @@
         if (bingo.values.BingoRunning2) return;////少なくとも1秒以内の連続当たり処理はしない（連続押しなどで数字が気付かれずに進んでしまうのを防止する）
 
         $("#BigNum .BigNum").remove();//前のあたり数値画面中央表示を削除
+        $(".BingoLank").hide();
 
         if (rouletteCountExt < 0) {
             //超巻きの場合。回数でなく、場所をランダムで一発設定
@@ -470,7 +577,7 @@
 
     bingo.events.BingoSave = function () {
         $("#loading").text("Saving...");
-        var data = Object.assign({}, bingo.data.BingoData);
+        var data = $.extend({}, bingo.data.BingoData);
         data.id = bingo.util.IdFormat(bingo.values.Env,"Bingo","0");
         data.category = bingo.util.CategoryFormat(bingo.values.Env,"Bingo");
         data.numberData = bingo.data.bingolist;
@@ -483,10 +590,10 @@
         }
         return $.ajax(query)
             .fail(function (error) {
-                //alert("453 " + JSON.stringify(error));
+                bingo.events.error(error);
             })
             .always(function (result) {
-                var data = Object.assign({}, bingo.data.HistoryData);
+                var data = $.extend({}, bingo.data.HistoryData);
                 data.id = bingo.util.IdFormat(bingo.values.Env,"History","0");
                 data.category = bingo.util.CategoryFormat(bingo.values.Env, "History");
                 data.numberData = bingo.events.packhistory(bingo.data.bingohistory);
@@ -499,7 +606,7 @@
                 }
                 return $.ajax(query)
                     .fail(function (error) {
-                        //alert("449 "+JSON.stringify(error+" 1.History"));
+                        bingo.events.error(error);
                     })
             })
             .always(function () {
@@ -540,8 +647,8 @@
     bingo.events.checkBingo = function (initial) {
         var bingocard = [];
         //前回の状態を保管
-        bingo.data.previousBingo = Object.assign({}, bingo.data.currentBingo);
-        bingo.data.previousReach = Object.assign({}, bingo.data.currentReach);
+        bingo.data.previousBingo = $.extend({}, bingo.data.currentBingo);
+        bingo.data.previousReach = $.extend({}, bingo.data.currentReach);
 
         var result = bingo.data.result;
         for (var i = 0; i < bingo.values.maxCardNumber; i++) {
@@ -613,15 +720,22 @@
         if (cnt >= 4) bingo.data.currentReach[idx] = true;
     }
 
-    //画面にカードを書く。bingo.data.bingosの内容にしたがって、カードへのあたり表示とリーチビンゴチェックを行う
-    bingo.events.renderBingoCard = function (initial) {
-
-        //画面のカードを削除
+    //画面の全カード削除
+    bingo.events.deleteallcard = function () {
         for (var i = 1; i < bingo.values.maxNumEtc; i++) {
             var e = bingo.elements.bingocontainer.find(".bingobox-" + i);
             if (e.length == 0) break;
             e.remove();
         }
+    }
+
+    //画面にカードを書く。bingo.data.bingosの内容にしたがって、カードへのあたり表示とリーチビンゴチェックを行う
+    bingo.events.renderBingoCard = function (initial) {
+
+        //画面のカードを削除
+        bingo.events.deleteallcard();
+
+        //空のカードを書く
         for (var idx = 1; idx <= bingo.values.maxCardNumber; idx++) {
             var box = bingo.elements.bingocontainer.find(".bingobox-n").clone();
             box.css("display", "");
@@ -664,7 +778,7 @@
                 }
             })
             .fail(function (error) {
-                alert("616 "+JSON.stringify(error));
+                bingo.events.error(error);
             })
 
     }

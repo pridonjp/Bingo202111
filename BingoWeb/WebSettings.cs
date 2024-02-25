@@ -20,5 +20,6 @@
         public string CacheSpanSeconds { get; set; } //メモリキャッシュの有効期限秒数
         public bool DebugLog { get; set; }
         public string ApplicationName { get; set; }
+        public bool ContainerDeletable {get; set; } //trueの場合コンテナ削除有効
     }
 }

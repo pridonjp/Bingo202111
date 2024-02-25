@@ -33,24 +33,16 @@ namespace BindoWeb.Controllers
         [HttpGet]
         public BingoData[] Get(string env)
         {
-            //var category = BingoUtil.CategoryFormat(env,"Card");
             var category = "Card";
 
             var bingo = new BingoUtil(webSettings,cache,cosmosCall);
-
-            //Cardを全件取得
-            var bingos = bingo.QueryItems<BingoData>(env,category);
-
-            var list = new BingoData[bingos.Count] ;
-            foreach(var item in bingos)
+            var maxcard = bingo.GetItemById<BingoData>(BingoUtil.IdFormat(env, "MaxCardNo", 0));
+            var maxcardNum = maxcard.numberData[0];
+            var list = new BingoData[maxcardNum];
+            for (var i = 0; i < maxcardNum; i++)
             {
-                var al = item.id.Split('.');
-                var idx = int.Parse(al[al.Length-1])-1;
-                if (list.Length - 1 < idx)
-                {
-                    Array.Resize(ref list, idx+1);
-                }
-                list[idx]= item;
+                var card = bingo.GetItemById<BingoData>(BingoUtil.IdFormat(env, category, i + 1));
+                list[i] = card;
             }
             return list;
         }

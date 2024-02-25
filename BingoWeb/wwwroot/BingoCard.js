@@ -10,7 +10,9 @@
         },
         events: {},
         data: {},
-        values: {},
+        values: {
+            autoreloadlimit:3600 //自動更新継続期限秒数
+        },
         async: {
             success: function () {var d = $.Deferred();d.resolve();return d.promise();},
             fail: function () {var d = $.Deferred();d.reject();return d.promise();}
@@ -121,11 +123,17 @@
 
     bingo.events.changereload = function () {
         if (bingo.elements.autoreload.val() > 0) {
+            bingo.values.autostarttime = Date.now();
             setTimeout(bingo.events.reload, parseInt(bingo.elements.autoreload.val()));
         }
     }
 
     bingo.events.reload = function () {
+        if (Date.now() - bingo.values.autostarttime > bingo.values.autoreloadlimit*1000) {
+            $("#autoreload").val(0);
+            return;
+        }
+
         if (bingo.elements.autoreload.val() == 0) return;
         var now = new Date();
         $("#last").text(now.getMinutes() + ":" + now.getSeconds())

@@ -1,0 +1,82 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8" />
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link href="lib/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="lib/jquery/dist/jquery.js"></script>
+
+    <script src="BingoLogView.js"></script>
+
+    <!--<link href="css/site.css" rel="stylesheet" />-->
+    <style>
+        /*ヘッダ部*/
+        .title {
+            width: 50%;
+            padding: 10px;
+            text-align: center;
+            margin: 20px 0px 20px 25%;
+        }
+    </style>
+
+    <title >Bingo Menu</title >
+</head >
+<body>
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <div class="bg-primary text-white rounded-pill title title">メニューと解説</div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-12 col-md-7">
+                <h4>メニュー</h4>
+                <dl>
+                    <dt>
+                        <a href="BingoTop.html">BingoTop.html ビンゴ抽選画面</a>
+                    </dt>
+                    <dd>
+                        司会が操作します<br />
+                        環境コードを付与する場合はBingoTop.html#<b>環境コード文字列</b> になります
+                    </dd>
+                    <dt>
+                        <a href="BingoCard.html">BingoCard.html 参加者用カード表示画面</a>
+                    </dt>
+                    <dd>
+                        各参加者の画面は環境コード省略の場合は、BingoCard.html#<b>カード番号</b><br />
+                        環境コードありの場合は、BingoCard.html#<b>環境コード</b>,<b>カード番号</b> になります
+                    </dd>
+                </dl>
+            </div>
+            <div class="col-12 col-md-5">
+                <h4>解説</h4>
+                <dl>
+                    <dt>ゲームの進め方</dt>
+                    <dd>
+                        事前準備
+                        <ol>
+                            <li>参加者に 1から順の連番をカード番号として配布する</li>
+                            <li>BingoTop.html画面を開きoptions内のカード再作成ボタンで参加者人数分のカードを作成する</li>
+                        </ol>
+                        ゲーム開始
+                        <ol>
+                            <li>参加者は BingoCard.html#カード番号 を開き自動更新設定を行う。以降自分のカードを画面で確認する</li>
+                            <li>司会はBingoTop.html画面をネットMeetingソフトで共有し、抽選ボタンを押してBingo番号を開けてい</li>
+                            <li>BingoはBingoTop.html画面に表示される。Bingo　が複数人同時の場合は、順番ボタンをスタート→ストップで２回押すと1位2位…を自動表示する</li>
+                        </ol>
+                    </dd>
+                    <dt>カード番号</dt>
+                    <dd>事前に参加者に1から順の連番を付与しておきます。</dd>
+                    <dt>コンテナ</dt>
+                    <dd>Azure Cosmos DBのデータベースBingo内にコンテナItemsが作成され、ビンゴの状態データが記録されます</dd>
+                    <dt>環境コード</dt>
+                    <dd>任意の文字列で環境別にビンゴの状態データを記録できます（保存時にキーに状態コードが付与される。環境コード無しで省略も可能）。<br />ただし、コンテナは共通のため、コンテナ削除は全環境に影響するためご注意ください。</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+    <script src="lib/bootstrap/dist/js/bootstrap.js"></script>
+</body>
+</html >
